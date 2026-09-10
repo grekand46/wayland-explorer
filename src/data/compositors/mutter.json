@@ -1,10 +1,14 @@
 {
-  "generationTimestamp": 1764893787856,
-  "version": "49.2",
+  "generationTimestamp": 1788711174989,
+  "version": "51",
   "globals": [
     {
+      "interface": "ext_background_effect_manager_v1",
+      "version": 1
+    },
+    {
       "interface": "gtk_shell1",
-      "version": 6
+      "version": 7
     },
     {
       "interface": "wl_compositor",
@@ -36,7 +40,7 @@
     },
     {
       "interface": "wp_color_manager_v1",
-      "version": 1
+      "version": 2
     },
     {
       "interface": "wp_color_representation_manager_v1",
@@ -84,6 +88,10 @@
     },
     {
       "interface": "xdg_activation_v1",
+      "version": 1
+    },
+    {
+      "interface": "xdg_session_manager_v1",
       "version": 1
     },
     {
@@ -140,7 +148,7 @@
     },
     {
       "interface": "zwp_text_input_manager_v3",
-      "version": 1
+      "version": 2
     },
     {
       "interface": "zxdg_exporter_v1",

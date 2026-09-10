@@ -1,6 +1,6 @@
 {
-  "generationTimestamp": 1753539514083,
-  "version": "1.11.0",
+  "generationTimestamp": 1782989152769,
+  "version": "1.14.0",
   "globals": [
     {
       "interface": "ext_data_control_manager_v1",
@@ -40,14 +40,14 @@
     },
     {
       "interface": "jay_compositor",
-      "version": 20
+      "version": 37
     },
     {
       "interface": "jay_damage_tracking",
       "version": 1
     },
     {
-      "interface": "jay_head_manager_v1",
+      "interface": "jay_popup_ext_manager_v1",
       "version": 1
     },
     {
@@ -60,11 +60,11 @@
     },
     {
       "interface": "wl_compositor",
-      "version": 6
+      "version": 7
     },
     {
       "interface": "wl_data_device_manager",
-      "version": 3
+      "version": 4
     },
     {
       "interface": "wl_drm",
@@ -72,7 +72,7 @@
     },
     {
       "interface": "wl_fixes",
-      "version": 1
+      "version": 2
     },
     {
       "interface": "wl_output",
@@ -80,7 +80,7 @@
     },
     {
       "interface": "wl_seat",
-      "version": 9
+      "version": 11
     },
     {
       "interface": "wl_shm",
@@ -96,6 +96,10 @@
     },
     {
       "interface": "wp_color_manager_v1",
+      "version": 3
+    },
+    {
+      "interface": "wp_color_representation_manager_v1",
       "version": 1
     },
     {
@@ -155,7 +159,15 @@
       "version": 1
     },
     {
+      "interface": "xdg_session_manager_v1",
+      "version": 1
+    },
+    {
       "interface": "xdg_toplevel_drag_manager_v1",
+      "version": 1
+    },
+    {
+      "interface": "xdg_toplevel_icon_manager_v1",
       "version": 1
     },
     {
@@ -179,6 +191,10 @@
       "version": 3
     },
     {
+      "interface": "zwlr_gamma_control_manager_v1",
+      "version": 1
+    },
+    {
       "interface": "zwlr_layer_shell_v1",
       "version": 5
     },
@@ -191,6 +207,10 @@
       "version": 3
     },
     {
+      "interface": "zwlr_virtual_pointer_manager_v1",
+      "version": 2
+    },
+    {
       "interface": "zwp_idle_inhibit_manager_v1",
       "version": 1
     },
@@ -200,7 +220,7 @@
     },
     {
       "interface": "zwp_linux_dmabuf_v1",
-      "version": 5
+      "version": 6
     },
     {
       "interface": "zwp_pointer_constraints_v1",
@@ -232,7 +252,7 @@
     },
     {
       "interface": "zxdg_decoration_manager_v1",
-      "version": 1
+      "version": 2
     },
     {
       "interface": "zxdg_output_manager_v1",

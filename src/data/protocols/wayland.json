@@ -88,7 +88,7 @@
           "name": "delete_id",
           "description": {
             "type": "description",
-            "text": "This event is used internally by the object ID management\nlogic. When a client deletes an object that it had created,\nthe server will send this event to acknowledge that it has\nseen the delete request. When the client receives this event,\nit will know that it can safely reuse the object ID.",
+            "text": "This event is used internally by the object ID management logic.\n\nWhen the server stops using an object created by the client, the server\nsends this event. In particular, after sending this event, the server\nwill no longer send any events that contain the object as the receiver\nor as an argument.\n\nWhen the client receives this event, it knows that it can reuse the\nobject ID.",
             "summary": "acknowledge object ID deletion"
           },
           "args": [
@@ -169,7 +169,7 @@
               "type": "arg",
               "name": "id",
               "argType": "new_id",
-              "summary": "bounded object"
+              "summary": "bound object"
             }
           ]
         }
@@ -228,6 +228,7 @@
       "type": "interface",
       "name": "wl_callback",
       "version": "1",
+      "frozen": true,
       "description": {
         "type": "description",
         "text": "Clients can handle the 'done' event to get notified when\nthe related request is done.\n\nNote, because wl_callback objects are created from multiple independent\nfactory interfaces, the wl_callback interface is frozen at version 1.",
@@ -259,7 +260,7 @@
     {
       "type": "interface",
       "name": "wl_compositor",
-      "version": "6",
+      "version": "7",
       "description": {
         "type": "description",
         "text": "A compositor.  This object is a singleton global.  The\ncompositor is in charge of combining the contents of multiple\nsurfaces into one displayable output.",
@@ -301,6 +302,18 @@
               "interface": "wl_region"
             }
           ]
+        },
+        {
+          "type": "request",
+          "name": "release",
+          "requestType": "destructor",
+          "since": "7",
+          "description": {
+            "type": "description",
+            "text": "This request destroys the wl_compositor. This has no effect on any other objects.",
+            "summary": "destroy wl_compositor"
+          },
+          "args": []
         }
       ],
       "events": [],
@@ -309,7 +322,7 @@
     {
       "type": "interface",
       "name": "wl_shm_pool",
-      "version": "2",
+      "version": "3",
       "description": {
         "type": "description",
         "text": "The wl_shm_pool object encapsulates a piece of memory shared\nbetween the compositor and client.  Through the wl_shm_pool\nobject, the client can allocate shared memory wl_buffer objects.\nAll objects created through the same pool share the same\nunderlying mapped memory. Reusing the mapped memory avoids the\nsetup/teardown overhead and is useful when interactively resizing\na surface or for many small buffers.",
@@ -395,12 +408,38 @@
         }
       ],
       "events": [],
-      "enums": []
+      "enums": [
+        {
+          "type": "enum",
+          "name": "error",
+          "since": "3",
+          "bitfield": false,
+          "description": {
+            "type": "description",
+            "text": "These errors can be emitted in response to wl_shm_pool requests.",
+            "summary": "wl_shm_pool error values"
+          },
+          "entries": [
+            {
+              "type": "entry",
+              "name": "invalid_format",
+              "value": "0",
+              "summary": "buffer format is not known"
+            },
+            {
+              "type": "entry",
+              "name": "invalid_stride",
+              "value": "1",
+              "summary": "invalid size or stride during buffer creation"
+            }
+          ]
+        }
+      ]
     },
     {
       "type": "interface",
       "name": "wl_shm",
-      "version": "2",
+      "version": "3",
       "description": {
         "type": "description",
         "text": "A singleton global object that provides support for shared\nmemory.\n\nClients can create wl_shm_pool objects using the create_pool\nrequest.\n\nOn binding the wl_shm object one or more format events\nare emitted to inform clients about the valid pixel formats\nthat can be used for buffers.",
@@ -456,7 +495,7 @@
           "name": "format",
           "description": {
             "type": "description",
-            "text": "Informs the client about a valid pixel format that\ncan be used for buffers. Known formats include\nargb8888 and xrgb8888.",
+            "text": "Informs the client about a valid pixel format that\ncan be used for buffers. Known formats include\nargb8888 and xrgb8888.\n\nExtensions to drm_fourcc.h (or the format enum) do not require\nincreasing the wl_shm version; as a result, clients may receive format\ncodes which were not in the list at the time the client was made.",
             "summary": "pixel format description"
           },
           "args": [
@@ -474,6 +513,7 @@
         {
           "type": "enum",
           "name": "error",
+          "since": "3",
           "bitfield": false,
           "description": {
             "type": "description",
@@ -485,13 +525,14 @@
               "type": "entry",
               "name": "invalid_format",
               "value": "0",
-              "summary": "buffer format is not known"
+              "summary": "buffer format is not known",
+              "deprecatedSince": "3"
             },
             {
               "type": "entry",
               "name": "invalid_stride",
               "value": "1",
-              "summary": "invalid size or stride during pool or buffer creation"
+              "summary": "invalid size or stride during pool creation"
             },
             {
               "type": "entry",
@@ -507,7 +548,7 @@
           "bitfield": false,
           "description": {
             "type": "description",
-            "text": "This describes the memory layout of an individual pixel.\n\nAll renderers should support argb8888 and xrgb8888 but any other\nformats are optional and may not be supported by the particular\nrenderer in use.\n\nThe drm format codes match the macros defined in drm_fourcc.h, except\nargb8888 and xrgb8888. The formats actually supported by the compositor\nwill be reported by the format event.\n\nFor all wl_shm formats and unless specified in another protocol\nextension, pre-multiplied alpha is used for pixel values.",
+            "text": "This describes the memory layout of an individual pixel.\n\nAll renderers should support argb8888 and xrgb8888 but any other\nformats are optional and may not be supported by the particular\nrenderer in use.\n\nThe drm format codes match the macros defined in drm_fourcc.h, except\nargb8888 and xrgb8888. The formats actually supported by the compositor\nwill be reported by the format event. See drm_fourcc.h for more detailed\nformat descriptions.\n\nFor all wl_shm formats and unless specified in another protocol\nextension, pre-multiplied alpha is used for pixel values.",
             "summary": "pixel formats"
           },
           "entries": [
@@ -581,7 +622,7 @@
               "type": "entry",
               "name": "rgba4444",
               "value": "0x32314152",
-              "summary": "16-bit RBGA format, [15:0] R:G:B:A 4:4:4:4 little endian"
+              "summary": "16-bit RGBA format, [15:0] R:G:B:A 4:4:4:4 little endian"
             },
             {
               "type": "entry",
@@ -1277,19 +1318,19 @@
               "type": "entry",
               "name": "gr3232f",
               "value": "0x46205247",
-              "summary": "[63:0] R:G 32:32 little endian"
+              "summary": "[63:0] G:R 32:32 little endian"
             },
             {
               "type": "entry",
               "name": "bgr323232f",
               "value": "0x46524742",
-              "summary": "[95:0] R:G:B 32:32:32 little endian"
+              "summary": "[95:0] B:G:R 32:32:32 little endian"
             },
             {
               "type": "entry",
               "name": "abgr32323232f",
               "value": "0x46384241",
-              "summary": "[127:0] R:G:B:A 32:32:32:32 little endian"
+              "summary": "[127:0] A:B:G:R 32:32:32:32 little endian"
             },
             {
               "type": "entry",
@@ -1356,6 +1397,35 @@
               "name": "s416",
               "value": "0x36313453",
               "summary": "non-subsampled Cb (1) and Cr (2) planes 16 bits per channel"
+            },
+            {
+              "type": "entry",
+              "name": "xvuy2101010",
+              "value": "0x30335958",
+              "summary": "[31:0] x:Cr:Cb:Y 2:10:10:10 little endian"
+            },
+            {
+              "type": "entry",
+              "name": "p230",
+              "value": "0x30333250",
+              "summary": "2x1 subsampled Cr:Cb plane 10 bits per channel packed"
+            },
+            {
+              "type": "entry",
+              "name": "t430",
+              "value": "0x30333454"
+            },
+            {
+              "type": "entry",
+              "name": "y8",
+              "value": "0x59455247",
+              "summary": "8-bit Y-only"
+            },
+            {
+              "type": "entry",
+              "name": "xyyy2101010",
+              "value": "0x34415059",
+              "summary": "[31:0] x:Y2:Y1:Y0 2:10:10:10 little endian"
             }
           ]
         }
@@ -1365,6 +1435,7 @@
       "type": "interface",
       "name": "wl_buffer",
       "version": "1",
+      "frozen": true,
       "description": {
         "type": "description",
         "text": "A buffer provides the content for a wl_surface. Buffers are\ncreated through factory interfaces such as wl_shm, wp_linux_buffer_params\n(from the linux-dmabuf protocol extension) or similar. It has a width and\na height and can be attached to a wl_surface, but the mechanism by which a\nclient provides and updates the contents is defined by the buffer factory\ninterface.\n\nColor channels are assumed to be electrical rather than optical (in other\nwords, encoded with a transfer function) unless otherwise specified. If\nthe buffer uses a format that has an alpha channel, the alpha channel is\nassumed to be premultiplied into the electrical color channel values\n(after transfer function encoding) unless otherwise specified.\n\nNote, because wl_buffer objects are created from multiple independent\nfactory interfaces, the wl_buffer interface is frozen at version 1.",
@@ -1400,7 +1471,7 @@
     {
       "type": "interface",
       "name": "wl_data_offer",
-      "version": "3",
+      "version": "4",
       "description": {
         "type": "description",
         "text": "A wl_data_offer represents a piece of data offered for transfer\nby another client (the source client).  It is used by the\ncopy-and-paste and drag-and-drop mechanisms.  The offer\ndescribes the different mime types that the data can be\nconverted to and provides the mechanism for transferring the\ndata directly from the source client.",
@@ -1597,7 +1668,7 @@
     {
       "type": "interface",
       "name": "wl_data_source",
-      "version": "3",
+      "version": "4",
       "description": {
         "type": "description",
         "text": "The wl_data_source object is the source side of a wl_data_offer.\nIt is created by the source client in a data transfer and\nprovides a way to describe the offered data and a way to respond\nto requests to transfer the data.",
@@ -1710,7 +1781,7 @@
           "since": "3",
           "description": {
             "type": "description",
-            "text": "The user performed the drop action. This event does not indicate\nacceptance, wl_data_source.cancelled may still be emitted afterwards\nif the drop destination does not accept any mime type.\n\nHowever, this event might however not be received if the compositor\ncancelled the drag-and-drop operation before this event could happen.\n\nNote that the data_source may still be used in the future and should\nnot be destroyed here.",
+            "text": "The user performed the drop action. This event does not indicate\nacceptance, wl_data_source.cancelled may still be emitted afterwards\nif the drop destination does not accept any mime type.\n\nHowever, this event might not be received if the compositor cancelled\nthe drag-and-drop operation before this event could happen.\n\nNote that the data_source may still be used in the future and should\nnot be destroyed here.",
             "summary": "the drag-and-drop operation physically finished"
           },
           "args": []
@@ -1732,7 +1803,7 @@
           "since": "3",
           "description": {
             "type": "description",
-            "text": "This event indicates the action selected by the compositor after\nmatching the source/destination side actions. Only one action (or\nnone) will be offered here.\n\nThis event can be emitted multiple times during the drag-and-drop\noperation, mainly in response to destination side changes through\nwl_data_offer.set_actions, and as the data device enters/leaves\nsurfaces.\n\nIt is only possible to receive this event after\nwl_data_source.dnd_drop_performed if the drag-and-drop operation\nended in an \"ask\" action, in which case the final wl_data_source.action\nevent will happen immediately before wl_data_source.dnd_finished.\n\nCompositors may also change the selected action on the fly, mainly\nin response to keyboard modifier changes during the drag-and-drop\noperation.\n\nThe most recent action received is always the valid one. The chosen\naction may change alongside negotiation (e.g. an \"ask\" action can turn\ninto a \"move\" operation), so the effects of the final action must\nalways be applied in wl_data_offer.dnd_finished.\n\nClients can trigger cursor surface changes from this point, so\nthey reflect the current action.",
+            "text": "This event indicates the action selected by the compositor after\nmatching the source/destination side actions. Only one action (or\nnone) will be offered here.\n\nThis event can be emitted multiple times during the drag-and-drop\noperation, mainly in response to destination side changes through\nwl_data_offer.set_actions, and as the data device enters/leaves\nsurfaces.\n\nIt is only possible to receive this event after\nwl_data_source.dnd_drop_performed if the drag-and-drop operation\nended in an \"ask\" action, in which case the final wl_data_source.action\nevent will happen immediately before wl_data_source.dnd_finished.\n\nCompositors may also change the selected action on the fly, mainly\nin response to keyboard modifier changes during the drag-and-drop\noperation.\n\nThe most recent action received is always the valid one. The chosen\naction may change alongside negotiation (e.g. an \"ask\" action can turn\ninto a \"move\" operation), so the effects of the final action must\nalways be applied in wl_data_source.dnd_finished.\n\nClients can trigger cursor surface changes from this point, so\nthey reflect the current action.",
             "summary": "notify the selected action"
           },
           "args": [
@@ -1771,7 +1842,7 @@
     {
       "type": "interface",
       "name": "wl_data_device",
-      "version": "3",
+      "version": "4",
       "description": {
         "type": "description",
         "text": "There is one wl_data_device per seat which can be obtained\nfrom the global wl_data_device_manager singleton.\n\nA wl_data_device provides access to inter-client data transfer\nmechanisms such as copy-and-paste and drag-and-drop.",
@@ -2013,7 +2084,7 @@
     {
       "type": "interface",
       "name": "wl_data_device_manager",
-      "version": "3",
+      "version": "4",
       "description": {
         "type": "description",
         "text": "The wl_data_device_manager is a singleton global object that\nprovides access to inter-client data transfer mechanisms such as\ncopy-and-paste and drag-and-drop.  These mechanisms are tied to\na wl_seat and this interface lets a client get a wl_data_device\ncorresponding to a wl_seat.\n\nDepending on the version bound, the objects created from the bound\nwl_data_device_manager object will have different requirements for\nfunctioning properly. See wl_data_source.set_actions,\nwl_data_offer.accept and wl_data_offer.finish for details.",
@@ -2062,6 +2133,18 @@
               "interface": "wl_seat"
             }
           ]
+        },
+        {
+          "type": "request",
+          "name": "release",
+          "requestType": "destructor",
+          "since": "4",
+          "description": {
+            "type": "description",
+            "text": "This request destroys the wl_data_device_manager. This has no effect on any other\nobjects.",
+            "summary": "destroy wl_data_device_manager"
+          },
+          "args": []
         }
       ],
       "events": [],
@@ -2608,7 +2691,7 @@
     {
       "type": "interface",
       "name": "wl_surface",
-      "version": "6",
+      "version": "7",
       "description": {
         "type": "description",
         "text": "A surface is a rectangular area that may be displayed on zero\nor more outputs, and shown any number of times at the compositor's\ndiscretion. They can present wl_buffers, receive user input, and\ndefine a local coordinate system.\n\nThe size of a surface (and relative positions on it) is described\nin surface-local coordinates, which may differ from the buffer\ncoordinates of the pixel content, in case a buffer_transform\nor a buffer_scale is used.\n\nA surface without a \"role\" is fairly useless: a compositor does\nnot know where, when or how to present it. The role is the\npurpose of a wl_surface. Examples of roles are a cursor for a\npointer (as set by wl_pointer.set_cursor), a drag icon\n(wl_data_device.start_drag), a sub-surface\n(wl_subcompositor.get_subsurface), and a window as defined by a\nshell protocol (e.g. wl_shell.get_shell_surface).\n\nA surface can have only one role at a time. Initially a\nwl_surface does not have a role. Once a wl_surface is given a\nrole, it is set permanently for the whole lifetime of the\nwl_surface object. Giving the current role again is allowed,\nunless explicitly forbidden by the relevant interface\nspecification.\n\nSurface roles are given by requests in other interfaces such as\nwl_pointer.set_cursor. The request should explicitly mention\nthat this request gives a role to a wl_surface. Often, this\nrequest also creates a new protocol object that represents the\nrole and adds additional functionality to wl_surface. When a\nclient wants to destroy a wl_surface, they must destroy this role\nobject before the wl_surface, otherwise a defunct_role_object error is\nsent.\n\nDestroying the role object does not remove the role from the\nwl_surface, but it may stop the wl_surface from \"playing the role\".\nFor instance, if a wl_subsurface object is destroyed, the wl_surface\nit was created for will be unmapped and forget its position and\nz-order. It is allowed to create a wl_subsurface for the same\nwl_surface again, but it is not allowed to use the wl_surface as\na cursor (cursor is a different role than sub-surface, and role\nswitching is not allowed).",
@@ -2631,7 +2714,7 @@
           "name": "attach",
           "description": {
             "type": "description",
-            "text": "Set a buffer as the content of this surface.\n\nThe new size of the surface is calculated based on the buffer\nsize transformed by the inverse buffer_transform and the\ninverse buffer_scale. This means that at commit time the supplied\nbuffer size must be an integer multiple of the buffer_scale. If\nthat's not the case, an invalid_size error is sent.\n\nThe x and y arguments specify the location of the new pending\nbuffer's upper left corner, relative to the current buffer's upper\nleft corner, in surface-local coordinates. In other words, the\nx and y, combined with the new surface size define in which\ndirections the surface's size changes. Setting anything other than 0\nas x and y arguments is discouraged, and should instead be replaced\nwith using the separate wl_surface.offset request.\n\nWhen the bound wl_surface version is 5 or higher, passing any\nnon-zero x or y is a protocol violation, and will result in an\n'invalid_offset' error being raised. The x and y arguments are ignored\nand do not change the pending state. To achieve equivalent semantics,\nuse wl_surface.offset.\n\nSurface contents are double-buffered state, see wl_surface.commit.\n\nThe initial surface contents are void; there is no content.\nwl_surface.attach assigns the given wl_buffer as the pending\nwl_buffer. wl_surface.commit makes the pending wl_buffer the new\nsurface contents, and the size of the surface becomes the size\ncalculated from the wl_buffer, as described above. After commit,\nthere is no pending buffer until the next attach.\n\nCommitting a pending wl_buffer allows the compositor to read the\npixels in the wl_buffer. The compositor may access the pixels at\nany time after the wl_surface.commit request. When the compositor\nwill not access the pixels anymore, it will send the\nwl_buffer.release event. Only after receiving wl_buffer.release,\nthe client may reuse the wl_buffer. A wl_buffer that has been\nattached and then replaced by another attach instead of committed\nwill not receive a release event, and is not used by the\ncompositor.\n\nIf a pending wl_buffer has been committed to more than one wl_surface,\nthe delivery of wl_buffer.release events becomes undefined. A well\nbehaved client should not rely on wl_buffer.release events in this\ncase. Alternatively, a client could create multiple wl_buffer objects\nfrom the same backing storage or use a protocol extension providing\nper-commit release notifications.\n\nDestroying the wl_buffer after wl_buffer.release does not change\nthe surface contents. Destroying the wl_buffer before wl_buffer.release\nis allowed as long as the underlying buffer storage isn't re-used (this\ncan happen e.g. on client process termination). However, if the client\ndestroys the wl_buffer before receiving the wl_buffer.release event and\nmutates the underlying buffer storage, the surface contents become\nundefined immediately.\n\nIf wl_surface.attach is sent with a NULL wl_buffer, the\nfollowing wl_surface.commit will remove the surface content.\n\nIf a pending wl_buffer has been destroyed, the result is not specified.\nMany compositors are known to remove the surface content on the following\nwl_surface.commit, but this behaviour is not universal. Clients seeking to\nmaximise compatibility should not destroy pending buffers and should\nensure that they explicitly remove content from surfaces, even after\ndestroying buffers.",
+            "text": "Set a buffer as the content of this surface.\n\nThe new size of the surface is calculated based on the buffer\nsize transformed by the inverse buffer_transform and the\ninverse buffer_scale. This means that at commit time the supplied\nbuffer size must be an integer multiple of the buffer_scale. If\nthat's not the case, an invalid_size error is sent.\n\nThe x and y arguments specify the location of the new pending\nbuffer's upper left corner, relative to the current buffer's upper\nleft corner, in surface-local coordinates. In other words, the\nx and y, combined with the new surface size define in which\ndirections the surface's size changes. Setting anything other than 0\nas x and y arguments is discouraged, and should instead be replaced\nwith using the separate wl_surface.offset request.\n\nWhen the bound wl_surface version is 5 or higher, passing any\nnon-zero x or y is a protocol violation, and will result in an\n'invalid_offset' error being raised. The x and y arguments are ignored\nand do not change the pending state. To achieve equivalent semantics,\nuse wl_surface.offset.\n\nSurface contents are double-buffered state, see wl_surface.commit.\n\nThe initial surface contents are void; there is no content.\nwl_surface.attach assigns the given wl_buffer as the pending\nwl_buffer. wl_surface.commit makes the pending wl_buffer the new\nsurface contents, and the size of the surface becomes the size\ncalculated from the wl_buffer, as described above. After commit,\nthere is no pending buffer until the next attach.\n\nCommitting a pending wl_buffer allows the compositor to read the\npixels in the wl_buffer. The compositor may access the pixels at\nany time after the wl_surface.commit request. When the compositor\nwill not access the pixels anymore, it will send the\nwl_buffer.release event. Only after receiving wl_buffer.release,\nthe client may reuse the wl_buffer. A wl_buffer that has been\nattached and then replaced by another attach instead of committed\nwill not receive a release event, and is not used by the\ncompositor.\n\nIf a pending wl_buffer has been committed to more than one wl_surface,\nthe delivery of wl_buffer.release events becomes undefined. A well\nbehaved client should not rely on wl_buffer.release events in this\ncase. Instead, clients hitting this case should use\nwl_surface.get_release or use a protocol extension providing per-commit\nrelease notifications (if none of these options are available, a\nfallback can be implemented by creating multiple wl_buffer objects from\nthe same backing storage).\n\nDestroying the wl_buffer after wl_buffer.release does not change\nthe surface contents. Destroying the wl_buffer before wl_buffer.release\nis allowed as long as the underlying buffer storage isn't re-used (this\ncan happen e.g. on client process termination). However, if the client\ndestroys the wl_buffer before receiving the wl_buffer.release event and\nmutates the underlying buffer storage, the surface contents become\nundefined immediately.\n\nIf wl_surface.attach is sent with a NULL wl_buffer, the\nfollowing wl_surface.commit will remove the surface content.\n\nIf a pending wl_buffer has been destroyed, the result is not specified.\nMany compositors are known to remove the surface content on the following\nwl_surface.commit, but this behaviour is not universal. Clients seeking to\nmaximise compatibility should not destroy pending buffers and should\nensure that they explicitly remove content from surfaces, even after\ndestroying buffers.",
             "summary": "set the surface contents"
           },
           "args": [
@@ -2854,6 +2937,25 @@
               "summary": "surface-local y coordinate"
             }
           ]
+        },
+        {
+          "type": "request",
+          "name": "get_release",
+          "since": "7",
+          "description": {
+            "type": "description",
+            "text": "Create a callback for the release of the buffer attached by the client\nwith wl_surface.attach.\n\nThe compositor will release the buffer when it has finished its usage of\nthe underlying storage for the relevant commit. Once the client receives\nthis event, and assuming the associated buffer is not pending release\nfrom other wl_surface.commit requests, the client can safely re-use the\nbuffer.\n\nRelease callbacks are double-buffered state, and will be associated\nwith the pending buffer at wl_surface.commit time.\n\nThe callback_data passed in the wl_callback.done event is unused and\nis always zero.\n\nSending this request without attaching a non-null buffer in the same\ncontent update is a protocol error. The compositor will send the\nno_buffer error in this case.",
+            "summary": "get a release callback"
+          },
+          "args": [
+            {
+              "type": "arg",
+              "name": "callback",
+              "argType": "new_id",
+              "summary": "callback object for the release",
+              "interface": "wl_callback"
+            }
+          ]
         }
       ],
       "events": [
@@ -2971,6 +3073,12 @@
               "name": "defunct_role_object",
               "value": "4",
               "summary": "surface was destroyed before its role object"
+            },
+            {
+              "type": "entry",
+              "name": "no_buffer",
+              "value": "5",
+              "summary": "no buffer was attached"
             }
           ]
         }
@@ -2979,7 +3087,7 @@
     {
       "type": "interface",
       "name": "wl_seat",
-      "version": "10",
+      "version": "11",
       "description": {
         "type": "description",
         "text": "A seat is a group of keyboards, pointer and touch devices. This\nobject is published as a global during start up, or when such a\ndevice is hot plugged.  A seat typically has a pointer and\nmaintains a keyboard focus and a pointer focus.",
@@ -3078,7 +3186,7 @@
           "since": "2",
           "description": {
             "type": "description",
-            "text": "In a multi-seat configuration the seat name can be used by clients to\nhelp identify which physical devices the seat represents.\n\nThe seat name is a UTF-8 string with no convention defined for its\ncontents. Each name is unique among all wl_seat globals. The name is\nonly guaranteed to be unique for the current compositor instance.\n\nThe same seat names are used for all clients. Thus, the name can be\nshared across processes to refer to a specific wl_seat global.\n\nThe name event is sent after binding to the seat global, and should be sent\nbefore announcing capabilities. This event only sent once per seat object,\nand the name does not change over the lifetime of the wl_seat global.\n\nCompositors may re-use the same seat name if the wl_seat global is\ndestroyed and re-created later.",
+            "text": "In a multi-seat configuration the seat name can be used by clients to\nhelp identify which physical devices the seat represents.\n\nThe seat name is a UTF-8 string with no convention defined for its\ncontents. Each name is unique among all wl_seat globals. The name is\nonly guaranteed to be unique for the current compositor instance.\n\nThe same seat names are used for all clients. Thus, the name can be\nshared across processes to refer to a specific wl_seat global.\n\nThe name event is sent after binding to the seat global, and should be sent\nbefore announcing capabilities. This event is only sent once per seat object,\nand the name does not change over the lifetime of the wl_seat global.\n\nCompositors may re-use the same seat name if the wl_seat global is\ndestroyed and re-created later.",
             "summary": "unique identifier for this seat"
           },
           "args": [
@@ -3145,7 +3253,7 @@
     {
       "type": "interface",
       "name": "wl_pointer",
-      "version": "10",
+      "version": "11",
       "description": {
         "type": "description",
         "text": "The wl_pointer interface represents one or more input devices,\nsuch as mice, which control the pointer location and pointer_focus\nof a seat.\n\nThe wl_pointer interface generates motion, enter and leave\nevents for the surfaces that the pointer is located over,\nand button and axis events for button presses, button releases\nand scrolling.",
@@ -3297,7 +3405,7 @@
           "name": "button",
           "description": {
             "type": "description",
-            "text": "Mouse button click and release notifications.\n\nThe location of the click is given by the last motion or\nenter event.\nThe time argument is a timestamp with millisecond\ngranularity, with an undefined base.\n\nThe button is a button code as defined in the Linux kernel's\nlinux/input-event-codes.h header file, e.g. BTN_LEFT.\n\nAny 16-bit button code value is reserved for future additions to the\nkernel's event code list. All other button codes above 0xFFFF are\ncurrently undefined but may be used in future versions of this\nprotocol.",
+            "text": "Mouse button click and release notifications.\n\nThe location of the click is given by the last motion, warp or\nenter event.\nThe time argument is a timestamp with millisecond\ngranularity, with an undefined base.\n\nThe button is a button code as defined in the Linux kernel's\nlinux/input-event-codes.h header file, e.g. BTN_LEFT.\n\nAny 16-bit button code value is reserved for future additions to the\nkernel's event code list. All other button codes above 0xFFFF are\ncurrently undefined but may be used in future versions of this\nprotocol.",
             "summary": "pointer button event"
           },
           "args": [
@@ -3489,6 +3597,30 @@
               "enum": "axis_relative_direction"
             }
           ]
+        },
+        {
+          "type": "event",
+          "name": "warp",
+          "since": "11",
+          "description": {
+            "type": "description",
+            "text": "Notification of pointer location change within a surface.\n\nThis location change is not due to events on the input device,\nbut because either the surface under the pointer was moved and\nthus the relative position of the pointer changed, or because\nthe compositor changed the pointer position in response to an\nevent like pointer confinement being exited.\n\nThe arguments surface_x and surface_y are the location relative to\nthe focused surface.\n\nThis event must not occur in the same wl_pointer.frame as a\nwl_pointer.enter or wl_pointer.motion event.",
+            "summary": "pointer warp event"
+          },
+          "args": [
+            {
+              "type": "arg",
+              "name": "surface_x",
+              "argType": "fixed",
+              "summary": "surface-local x coordinate"
+            },
+            {
+              "type": "arg",
+              "name": "surface_y",
+              "argType": "fixed",
+              "summary": "surface-local y coordinate"
+            }
+          ]
         }
       ],
       "enums": [
@@ -3619,7 +3751,7 @@
     {
       "type": "interface",
       "name": "wl_keyboard",
-      "version": "10",
+      "version": "11",
       "description": {
         "type": "description",
         "text": "The wl_keyboard interface represents one or more keyboards\nassociated with a seat.\n\nEach wl_keyboard has the following logical state:\n\n- an active surface (possibly null),\n- the keys currently logically down,\n- the active modifiers,\n- the active group.\n\nBy default, the active surface is null, the keys currently logically down\nare empty, the active modifiers and the active group are 0.",
@@ -3886,7 +4018,7 @@
     {
       "type": "interface",
       "name": "wl_touch",
-      "version": "10",
+      "version": "11",
       "description": {
         "type": "description",
         "text": "The wl_touch interface represents a touchscreen\nassociated with a seat.\n\nTouch interactions can consist of one or more contacts.\nFor each contact, a series of events is generated, starting\nwith a down event, followed by zero or more motion events,\nand ending with an up event. Events relating to the same\ncontact point can be identified by the ID of the sequence.",
@@ -4044,7 +4176,7 @@
           "since": "6",
           "description": {
             "type": "description",
-            "text": "Sent when a touchpoint has changed its shape.\n\nThis event does not occur on its own. It is sent before a\nwl_touch.frame event and carries the new shape information for\nany previously reported, or new touch points of that frame.\n\nOther events describing the touch point such as wl_touch.down,\nwl_touch.motion or wl_touch.orientation may be sent within the\nsame wl_touch.frame. A client should treat these events as a single\nlogical touch point update. The order of wl_touch.shape,\nwl_touch.orientation and wl_touch.motion is not guaranteed.\nA wl_touch.down event is guaranteed to occur before the first\nwl_touch.shape event for this touch ID but both events may occur within\nthe same wl_touch.frame.\n\nA touchpoint shape is approximated by an ellipse through the major and\nminor axis length. The major axis length describes the longer diameter\nof the ellipse, while the minor axis length describes the shorter\ndiameter. Major and minor are orthogonal and both are specified in\nsurface-local coordinates. The center of the ellipse is always at the\ntouchpoint location as reported by wl_touch.down or wl_touch.move.\n\nThis event is only sent by the compositor if the touch device supports\nshape reports. The client has to make reasonable assumptions about the\nshape if it did not receive this event.",
+            "text": "Sent when a touchpoint has changed its shape.\n\nThis event does not occur on its own. It is sent before a\nwl_touch.frame event and carries the new shape information for\nany previously reported, or new touch points of that frame.\n\nOther events describing the touch point such as wl_touch.down,\nwl_touch.motion or wl_touch.orientation may be sent within the\nsame wl_touch.frame. A client should treat these events as a single\nlogical touch point update. The order of wl_touch.shape,\nwl_touch.orientation and wl_touch.motion is not guaranteed.\nA wl_touch.down event is guaranteed to occur before the first\nwl_touch.shape event for this touch ID but both events may occur within\nthe same wl_touch.frame.\n\nA touchpoint shape is approximated by an ellipse through the major and\nminor axis length. The major axis length describes the longer diameter\nof the ellipse, while the minor axis length describes the shorter\ndiameter. Major and minor are orthogonal and both are specified in\nsurface-local coordinates. The center of the ellipse is always at the\ntouchpoint location as reported by wl_touch.down or wl_touch.motion.\n\nThis event is only sent by the compositor if the touch device supports\nshape reports. The client has to make reasonable assumptions about the\nshape if it did not receive this event.",
             "summary": "update shape of touch point"
           },
           "args": [
@@ -4420,7 +4552,7 @@
     {
       "type": "interface",
       "name": "wl_region",
-      "version": "1",
+      "version": "7",
       "description": {
         "type": "description",
         "text": "A region object describes an area.\n\nRegion objects are used to describe the opaque and input\nregions of a surface.",
@@ -4710,7 +4842,7 @@
     {
       "type": "interface",
       "name": "wl_fixes",
-      "version": "1",
+      "version": "2",
       "description": {
         "type": "description",
         "text": "This global fixes problems with other core-protocol interfaces that\ncannot be fixed in these interfaces themselves.",
@@ -4744,10 +4876,54 @@
               "interface": "wl_registry"
             }
           ]
+        },
+        {
+          "type": "request",
+          "name": "ack_global_remove",
+          "since": "2",
+          "description": {
+            "type": "description",
+            "text": "Acknowledge the removal of the specified global.\n\nIf no global with the specified name exists or the global is not removed,\nthe wl_fixes.invalid_ack_remove protocol error will be posted.\n\nDue to the Wayland protocol being asynchronous, the wl_global objects\ncannot be destroyed immediately. For example, if a wl_global is removed\nand a client attempts to bind that global around same time, it can\nresult in a protocol error due to an unknown global name in the bind\nrequest.\n\nIn order to avoid crashing clients, the compositor should remove the\nwl_global once it is guaranteed that no more bind requests will come.\n\nThe wl_fixes.ack_global_remove() request is used to signal to the\ncompositor that the client will not bind the given global anymore. After\nall clients acknowledge the removal of the global, the compositor can\nsafely destroy it.\n\nThe client must call the wl_fixes.ack_global_remove() request in\nresponse to a wl_registry.global_remove() event even if it did not bind\nthe corresponding global.",
+            "summary": "acknowledge global removal"
+          },
+          "args": [
+            {
+              "type": "arg",
+              "name": "registry",
+              "argType": "object",
+              "summary": "the registry object",
+              "interface": "wl_registry"
+            },
+            {
+              "type": "arg",
+              "name": "name",
+              "argType": "uint",
+              "summary": "unique name of the global"
+            }
+          ]
         }
       ],
       "events": [],
-      "enums": []
+      "enums": [
+        {
+          "type": "enum",
+          "name": "error",
+          "bitfield": false,
+          "description": {
+            "type": "description",
+            "text": "These errors can be emitted in response to wl_fixes requests.",
+            "summary": "wl_fixes error values"
+          },
+          "entries": [
+            {
+              "type": "entry",
+              "name": "invalid_ack_remove",
+              "value": "0",
+              "summary": "unknown global or the global is not removed"
+            }
+          ]
+        }
+      ]
     }
   ]
 }
